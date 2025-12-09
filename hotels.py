@@ -1,12 +1,22 @@
 from fastapi import Query, Body, APIRouter
+from pydantic import BaseModel
+from typing import Annotated
+from schemas.hotels import Hotel, HotelPATCH
 
 
 router = APIRouter(prefix="/hotels", tags=["Отели"])
 
 
 hotels = [
-    {'id': 1, 'title': 'Belgrade'},
-    {'id': 2, 'title': 'Kragujevac'},
+    {'id': 1, 'title': 'Белград', 'name': "belgrade"},
+    {'id': 2, 'title': 'Крагуевац', 'name': 'kragujevac'},
+    {"id": 3, "title": "Sochi", "name": "sochi"},
+    {"id": 4, "title": "Дубай", "name": "dubai"},
+    {"id": 5, "title": "Мальдивы", "name": "maldivi"},
+    {"id": 6, "title": "Геленджик", "name": "gelendzhik"},
+    {"id": 7, "title": "Москва", "name": "moscow"},
+    {"id": 8, "title": "Казань", "name": "kazan"},
+    {"id": 9, "title": "Санкт-Петербург", "name": "spb"},
 ]
 
 
@@ -14,25 +24,58 @@ hotels = [
 def get_hotels(
         id: int | None = Query(None, description="Айдишник"),
         title: str | None = Query(None, description="Название отеля"),
+        page: int | None = Query(None, gt=0, lt=100),
+        per_page: int | None = Query(None, gt=0, lt=30)
 ):
     hotels_ = []
-    for hotel in hotels:
-        if id and hotel["id"] != id:
-            continue
-        if title and hotel["title"] != title:
-            continue
-        hotels_.append(hotel)
-    return hotels_
+
+    if not id and not title:
+        if page and per_page:
+            start = (page - 1) * per_page
+            end = start + per_page
+            hotels_ = hotels[start:end]
+    else:
+        for hotel in hotels:
+            if id and hotel["id"] != id:
+                continue
+            if title and hotel["title"] != title:
+                continue
+            hotels_.append(hotel)
+
+    if hotels_:
+        return hotels_
+    else:
+        return hotels
 
 
 @router.post("")
 def create_hotel(
-        title: str = Body(embed=True),
-):
+        hotel_data: Annotated[
+            Hotel,
+            Body(
+                openapi_examples={
+                    "1": {
+                        "summary": "Сочи",
+                        "value": {
+                            "title": "Отель Сочи 5 звезд у моря",
+                            "name": "sochi_u_morya",
+                        },
+                    },
+                    "2": {
+                        "summary": "Краснодар",
+                        "value": {
+                            "title": "Отель Краснодар",
+                            "name": "krasnodar",
+                        },
+                    }
+                }
+            ),
+        ]):
+
     global hotels
     hotels.append({
         "id": hotels[-1]["id"] + 1,
-        "title": title
+        "title": hotel_data.title
     })
     return {"status": "OK"}
 
@@ -47,24 +90,23 @@ def delete_hotel(hotel_id: int):
 @router.patch("/{hotel_id}")
 def update_hotel_partial(
         hotel_id: int,
-        name: str = Body(embed=True),
+        hotel_data: HotelPATCH
 ):
     global hotels
     for hotel in hotels:
         if hotel["id"] == hotel_id:
-            hotel["name"] = name
+            hotel["name"] = hotel_data.name
     return {"status": "OK"}
 
 
 @router.put("/{hotel_id}")
 def update_hotel_full(
         hotel_id: int,
-        title: str = Body(embed=True),
-        name: str = Body(embed=True),
+        hotel_data: Hotel
 ):
     global hotels
     for hotel in hotels:
         if hotel["id"] == hotel_id:
-            hotel["title"] = title
-            hotel["name"] = name
+            hotel["title"] = hotel_data.title
+            hotel["name"] = hotel_data.name
     return {"status": "OK"}
