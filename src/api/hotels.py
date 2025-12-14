@@ -1,7 +1,7 @@
 from fastapi import Query, Body, APIRouter
-from pydantic import BaseModel
+from src.api.dependencies import PaginationDep
 from typing import Annotated
-from schemas.hotels import Hotel, HotelPATCH
+from src.schemas.hotels import Hotel, HotelPATCH
 
 
 router = APIRouter(prefix="/hotels", tags=["Отели"])
@@ -22,17 +22,16 @@ hotels = [
 
 @router.get("")
 def get_hotels(
+        pagination: PaginationDep,
         id: int | None = Query(None, description="Айдишник"),
-        title: str | None = Query(None, description="Название отеля"),
-        page: int | None = Query(None, gt=0, lt=100),
-        per_page: int | None = Query(None, gt=0, lt=30)
+        title: str | None = Query(None, description="Название отеля")
 ):
     hotels_ = []
 
     if not id and not title:
-        if page and per_page:
-            start = (page - 1) * per_page
-            end = start + per_page
+        if pagination.page and pagination.per_page:
+            start = (pagination.page - 1) * pagination.per_page
+            end = start + pagination.per_page
             hotels_ = hotels[start:end]
     else:
         for hotel in hotels:
