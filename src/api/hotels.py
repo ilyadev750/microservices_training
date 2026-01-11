@@ -6,7 +6,7 @@ from src.repositories.hotels import HotelsRepository
 from sqlalchemy import insert, select, func
 from src.database import async_session_maker, engine
 from src.models.hotels import HotelsOrm
-from src.schemas.hotels import Hotel, HotelPATCH
+from src.schemas.hotels import HotelAdd, HotelPATCH
 
 
 router = APIRouter(prefix="/hotels", tags=["Отели"])
@@ -34,7 +34,7 @@ async def get_hotel(hotel_id: int):
         return {"status": "OK", "data": result}
 
 @router.post("")
-async def create_hotel(hotel_data: Hotel = Body(openapi_examples={
+async def create_hotel(hotel_data: HotelAdd = Body(openapi_examples={
         "1": {
             "summary": "Сочи",
             "value": {
@@ -46,6 +46,7 @@ async def create_hotel(hotel_data: Hotel = Body(openapi_examples={
     ):
     async with async_session_maker() as session:
         await HotelsRepository(session).add(hotel_data)
+        await session.commit()
         return {"status": "OK", "data": hotel_data}
 
 
@@ -54,6 +55,7 @@ async def delete_hotel(hotel_id: int):
     async with async_session_maker() as session:
         try:
             await HotelsRepository(session).delete(id=hotel_id)
+            await session.commit()
             return {"status": "OK", "data": "Success"}
         except NoResultFound:
             raise HTTPException(status_code=404,
@@ -70,14 +72,16 @@ async def update_hotel_partial(
             hotel_data,
             exclude_unset=True,
             id=hotel_id)
+        await session.commit()
     return {"status": "OK"}
 
 
 @router.put("/{hotel_id}")
 async def update_hotel_full(
         hotel_id: int,
-        hotel_data: Hotel
+        hotel_data: HotelAdd
 ):
     async with async_session_maker() as session:
         await HotelsRepository(session).update(hotel_data, id=hotel_id)
+        await session.commit()
     return {"status": "OK"}
