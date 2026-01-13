@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import ForeignKey
-
 from src.database import Base
+from datetime import date
 
 
 class RoomsOrm(Base):
@@ -12,3 +12,4 @@ class RoomsOrm(Base):
     description: Mapped[str | None]
     price: Mapped[int]
     quantity: Mapped[int]
+    people_number: Mapped[int]

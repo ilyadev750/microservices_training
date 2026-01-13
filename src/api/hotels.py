@@ -3,9 +3,7 @@ from sqlalchemy.exc import NoResultFound
 from fastapi import HTTPException
 from src.api.dependencies import PaginationDep
 from src.repositories.hotels import HotelsRepository
-from sqlalchemy import insert, select, func
-from src.database import async_session_maker, engine
-from src.models.hotels import HotelsOrm
+from src.database import async_session_maker
 from src.schemas.hotels import HotelAdd, HotelPATCH
 
 
@@ -32,6 +30,7 @@ async def get_hotel(hotel_id: int):
     async with async_session_maker() as session:
         result = await HotelsRepository(session).get_one_or_none(id=hotel_id)
         return {"status": "OK", "data": result}
+
 
 @router.post("")
 async def create_hotel(hotel_data: HotelAdd = Body(openapi_examples={
