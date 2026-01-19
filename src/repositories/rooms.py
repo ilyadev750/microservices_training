@@ -1,7 +1,11 @@
 from src.repositories.base import BaseRepository
+from datetime import date
 from src.models.rooms import RoomsOrm
 from src.schemas.rooms import Room
-from sqlalchemy import select, update
+from sqlalchemy import select, func, update
+from src.database import engine
+from src.repositories.utils import rooms_ids_for_booking
+from src.models.bookings import BookingsOrm
 
 
 class RoomsRepository(BaseRepository):
@@ -26,3 +30,14 @@ class RoomsRepository(BaseRepository):
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_filtered_by_time(
+            self,
+            hotel_id,
+            date_from: date,
+            date_to: date,
+    ):
+
+        rooms_ids_to_get = rooms_ids_for_booking(date_from, date_to, hotel_id)
+
+        return await self.get_filtered(RoomsOrm.id.in_(rooms_ids_to_get))

@@ -6,7 +6,6 @@ class RoomPut(BaseModel):
     description: str
     price: int
     quantity: int
-    people_number: int
 
 
 class RoomAdd(RoomPut):
@@ -23,4 +22,3 @@ class RoomPATCH(BaseModel):
     description: str | None = Field(None)
     price: int | None = Field(None)
     quantity: int | None = Field(None)
-    people_number: int | None = Field(None)
