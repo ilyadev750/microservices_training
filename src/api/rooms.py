@@ -3,7 +3,12 @@ from datetime import date
 from sqlalchemy.exc import NoResultFound, IntegrityError
 from fastapi import HTTPException
 from src.api.dependencies import DBDep
-from src.schemas.rooms import RoomAdd, RoomPATCH, RoomPut
+from src.schemas.rooms import (RoomAdd,
+                               RoomAddRequest,
+                               RoomPatchRequest,
+                               RoomPATCH)
+from src.schemas.facilities import RoomFacilityAdd
+from src.repositories.utils import get_result_list_from_two
 
 
 router = APIRouter(prefix="/hotels", tags=["Номера"])
@@ -33,7 +38,7 @@ async def get_one_room(
 @router.post("/{hotel_id}/rooms")
 async def create_room(hotel_id: int,
                       db: DBDep,
-                      room_data: RoomPut = Body(openapi_examples={
+                      room_data: RoomAddRequest = Body(openapi_examples={
         "1": {
             "summary": "Эконом номер",
             "value": {
@@ -41,14 +46,19 @@ async def create_room(hotel_id: int,
                 "description": "",
                 "price": 2500,
                 "quantity": 10,
-                "people_number": 2
+                "facilities_ids": [1, 2]
             }
         },
     })
     ):
     try:
         _room_data = RoomAdd(hotel_id=hotel_id, **room_data.model_dump())
-        await db.rooms.add(_room_data)
+        room = await db.rooms.add(_room_data)
+
+        rooms_facilities_data = [RoomFacilityAdd(room_id=room.id, facility_id=f_id) for f_id in
+                                 room_data.facilities_ids]
+        await db.rooms_facilities.add_bulk(rooms_facilities_data)
+
         await db.commit()
         return {"status": "OK", "data": room_data}
     except IntegrityError:
@@ -62,21 +72,39 @@ async def update_room_partial(
         hotel_id: int,
         room_id: int,
         db: DBDep,
-        room_data: RoomPATCH
+        room_data: RoomPatchRequest
 ):
+    _room_data = RoomPATCH(**room_data.model_dump(exclude_unset=True))
     result = await db.rooms.update(
-            room_data,
+            _room_data,
             exclude_unset=True,
             hotel_id=hotel_id,
             id=room_id)
 
-    if result:
-        await db.commit()
-        return {"status": "OK"}
-    else:
+    if not result:
         raise HTTPException(status_code=404,
                             detail=f"Комната с id {room_id} не найдена"
                                    f"в отеле с id {hotel_id}")
+
+
+
+    current_facility_ids = await db.rooms_facilities.get_filtered_facility_ids(
+        room_id=room_id)
+
+    add_facility_ids = get_result_list_from_two(
+        room_data.facilities_ids,
+        current_facility_ids)
+    delete_facility_ids = get_result_list_from_two(
+        current_facility_ids,
+        room_data.facilities_ids)
+
+    await db.rooms_facilities.set_room_facilities(room_id=room_id,
+                                                  room_data=room_data)
+
+    await db.commit()
+    return {"status": "OK",
+            "add": add_facility_ids,
+            "delete": delete_facility_ids}
 
 
 @router.put("/{hotel_id}/rooms/{room_id}")
@@ -84,19 +112,35 @@ async def update_room_full(
         hotel_id: int,
         room_id: int,
         db: DBDep,
-        room_data: RoomPut
+        room_data: RoomAddRequest
 ):
-    result = await db.rooms.update(room_data,
+    _room_data = RoomAdd(hotel_id=hotel_id,
+                         **room_data.model_dump())
+    result = await db.rooms.update(_room_data,
                                    hotel_id=hotel_id,
                                    id=room_id)
 
-    if result:
-        await db.commit()
-        return {"status": "OK"}
-    else:
+    if not result:
         raise HTTPException(status_code=404,
-                            detail=f"Комната с id {room_id} не найдена"
+                            detail=f"Комната с id {room_id} не найдена "
                                    f"в отеле с id {hotel_id}")
+
+    current_facility_ids = await db.rooms_facilities.get_filtered_facility_ids(
+        room_id=room_id)
+
+    add_facility_ids = get_result_list_from_two(
+        room_data.facilities_ids,
+        current_facility_ids)
+    delete_facility_ids = get_result_list_from_two(
+        current_facility_ids,
+        room_data.facilities_ids)
+
+    await db.rooms_facilities.set_room_facilities(room_id=room_id,
+                                                  room_data=room_data)
+    await db.commit()
+    return {"status": "OK",
+            "add": add_facility_ids,
+            "delete": delete_facility_ids}
 
 
 @router.delete("/{hotel_id}/rooms/{room_id}")

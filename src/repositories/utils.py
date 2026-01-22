@@ -52,3 +52,7 @@ def rooms_ids_for_booking(
         )
     )
     return rooms_ids_to_get
+
+
+def get_result_list_from_two(list1, list2):
+    return list(set(list1) - set(list2))
