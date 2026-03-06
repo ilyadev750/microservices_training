@@ -1,18 +1,19 @@
 from sqlalchemy import select
 from datetime import date
 from src.repositories.base import BaseRepository
+from src.repositories.mappers.mappers import BookingDataMapper
 from src.models.bookings import BookingsOrm
 from src.schemas.bookings import Booking
 
 
 class BookingsRepository(BaseRepository):
     model = BookingsOrm
-    schema = Booking
+    mapper = BookingDataMapper
 
     async def get_user_bookings(self, user_id):
         query = select(BookingsOrm).filter_by(user_id=user_id)
         result = await self.session.execute(query)
-        return [Booking.model_validate(booking, from_attributes=True)
+        return [self.mapper.map_to_domain_entity(booking)
                 for booking in result.scalars().all()]
 
     async def check_bookings(

@@ -2,7 +2,9 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from src.repositories.base import BaseRepository
 from src.models.facilities import FacilitiesOrm, RoomsFacilitiesOrm
-from src.schemas.facilities import Facility, RoomFacility, RoomFacilityAdd
+from src.repositories.mappers.mappers import (FacilityDataMapper,
+                                              RoomFacilityDataMapper)
+from src.schemas.facilities import RoomFacilityAdd
 from sqlalchemy import select, delete, insert
 from pydantic import BaseModel
 from src.repositories.utils import get_result_list_from_two
@@ -10,11 +12,11 @@ from src.repositories.utils import get_result_list_from_two
 
 class FacilityRepository(BaseRepository):
     model = FacilitiesOrm
-    schema = Facility
+    mapper = FacilityDataMapper
 
 class RoomsFacilitiesRepository(BaseRepository):
     model = RoomsFacilitiesOrm
-    schema = RoomFacility
+    mapper = RoomFacilityDataMapper
 
     async def get_filtered_facility_ids(self, *filter, **filter_by):
         query = (
@@ -33,7 +35,6 @@ class RoomsFacilitiesRepository(BaseRepository):
         res = await self.session.execute(get_current_facilities_ids_query)
         current_facility_ids: list[int] = res.scalars().all()
 
-        # if room_data.facilities_ids:
 
         add_facility_ids = get_result_list_from_two(
             room_data.facilities_ids,
