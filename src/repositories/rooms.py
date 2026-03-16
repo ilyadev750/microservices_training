@@ -12,11 +12,11 @@ class RoomsRepository(BaseRepository):
     model = RoomsOrm
     mapper = RoomDataMapper
 
-    async def get_all(self, hotel_id: int):
-        query = select(RoomsOrm).filter_by(hotel_id=hotel_id)
-        result = await self.session.execute(query)
-        return [self.mapper.map_to_domain_entity(room)
-                for room in result.scalars().all()]
+    # async def get_all(self, hotel_id: int):
+    #     query = select(RoomsOrm).filter_by(hotel_id=hotel_id)
+    #     result = await self.session.execute(query)
+    #     return [self.mapper.map_to_domain_entity(room)
+    #             for room in result.scalars().all()]
 
     async def update(self,
                      data,
