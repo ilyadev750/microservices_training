@@ -86,5 +86,4 @@ async def auth_ac(ac, register_user):
         }
     )
     assert ac.cookies["access_token"]
-    # print(ac.cookies["access_token"])
     yield ac

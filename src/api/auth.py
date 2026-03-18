@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Response
 from datetime import datetime, timezone, timedelta
 from src.api.dependencies import UserIdDep, UserLogoutDep, DBDep
-from src.database import async_session_maker
+from src.database import async_session_maker, async_session_maker_null_pull
 from src.schemas.users import UserRequestAdd, UserAdd
 from passlib.context import CryptContext
 import jwt
@@ -79,7 +79,11 @@ async def login_user(
 async def get_me(
         user_id: UserIdDep,
 ):
-    async with async_session_maker() as session:
+    if settings.MODE == 'TEST':
+        as_session_maker = async_session_maker_null_pull
+    else:
+        as_session_maker = async_session_maker
+    async with as_session_maker() as session:
         user = await UsersRepository(session).get_one_or_none(id=user_id)
         return user
 
